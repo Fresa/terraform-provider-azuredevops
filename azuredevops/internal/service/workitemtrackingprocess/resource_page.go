@@ -263,19 +263,3 @@ func deleteResourcePage(ctx context.Context, d *schema.ResourceData, m any) diag
 
 	return nil
 }
-
-func findPageById(layout *workitemtrackingprocess.FormLayout, pageId string) *workitemtrackingprocess.Page {
-	if layout == nil {
-		return nil
-	}
-	pages := layout.Pages
-	if pages == nil {
-		return nil
-	}
-	for _, page := range *pages {
-		if page.Id != nil && *page.Id == pageId {
-			return &page
-		}
-	}
-	return nil
-}
