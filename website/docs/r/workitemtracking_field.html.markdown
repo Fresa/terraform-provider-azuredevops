@@ -23,6 +23,56 @@ resource "azuredevops_workitemtracking_field" "example" {
 }
 ```
 
+### Integer Field with Description
+
+```hcl
+resource "azuredevops_workitemtracking_field" "priority" {
+  name           = "Custom Priority"
+  reference_name = "Custom.Priority"
+  type           = "integer"
+  description    = "A custom priority field for work items"
+}
+```
+
+### Boolean Field
+
+```hcl
+resource "azuredevops_workitemtracking_field" "approved" {
+  name           = "Approved"
+  reference_name = "Custom.Approved"
+  type           = "boolean"
+  description    = "Indicates whether the item has been approved"
+}
+```
+
+### HTML Field
+
+```hcl
+resource "azuredevops_workitemtracking_field" "notes" {
+  name           = "Custom Notes"
+  reference_name = "Custom.Notes"
+  type           = "html"
+  description    = "Additional notes in HTML format"
+}
+```
+
+### List Field
+
+```hcl
+resource "azuredevops_workitemtrackingprocess_list" "example" {
+  name  = "Priority Levels"
+  items = ["Low", "Medium", "High", "Critical"]
+}
+
+resource "azuredevops_workitemtracking_field" "example" {
+  name           = "Priority Level"
+  reference_name = "Custom.PriorityLevel"
+  type           = "string"
+  is_picklist    = true
+  picklist_id    = azuredevops_workitemtrackingprocess_list.example.id
+}
+```
+
 ### Restore a Deleted Field
 
 ```hcl
