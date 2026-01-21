@@ -30,6 +30,7 @@ func ResourceField() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		// https://learn.microsoft.com/en-us/azure/devops/boards/work-items/work-item-fields?view=azure-devops#field-attributes
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:             schema.TypeString,
@@ -101,31 +102,23 @@ func ResourceField() *schema.Resource {
 			},
 			"can_sort_by": {
 				Type:        schema.TypeBool,
-				Optional:    true,
-				ForceNew:    true,
-				Default:     true,
-				Description: "Indicates whether the field can be sorted in server queries. Default: `true`.",
+				Computed:    true,
+				Description: "Indicates whether the field can be sorted in server queries.",
 			},
 			"is_queryable": {
 				Type:        schema.TypeBool,
-				Optional:    true,
-				ForceNew:    true,
-				Default:     true,
-				Description: "Indicates whether the field can be queried in the server. Default: `true`.",
+				Computed:    true,
+				Description: "Indicates whether the field can be queried in the server.",
 			},
 			"is_identity": {
 				Type:        schema.TypeBool,
-				Optional:    true,
-				ForceNew:    true,
-				Default:     false,
-				Description: "Indicates whether this field is an identity field. Default: `false`.",
+				Computed:    true,
+				Description: "Indicates whether this field is an identity field.",
 			},
 			"is_picklist": {
 				Type:        schema.TypeBool,
-				Optional:    true,
-				ForceNew:    true,
-				Default:     false,
-				Description: "Indicates whether this field is a picklist. Default: `false`.",
+				Computed:    true,
+				Description: "Indicates whether this field is a picklist.",
 			},
 			"is_picklist_suggested": {
 				Type:        schema.TypeBool,
@@ -189,10 +182,6 @@ func resourceFieldCreate(ctx context.Context, d *schema.ResourceData, m interfac
 		ReferenceName:       converter.String(d.Get("reference_name").(string)),
 		Type:                converter.ToPtr(workitemtracking.FieldType(d.Get("type").(string))),
 		ReadOnly:            converter.Bool(d.Get("read_only").(bool)),
-		CanSortBy:           converter.Bool(d.Get("can_sort_by").(bool)),
-		IsQueryable:         converter.Bool(d.Get("is_queryable").(bool)),
-		IsIdentity:          converter.Bool(d.Get("is_identity").(bool)),
-		IsPicklist:          converter.Bool(d.Get("is_picklist").(bool)),
 		IsPicklistSuggested: converter.Bool(d.Get("is_picklist_suggested").(bool)),
 		IsLocked:            converter.Bool(d.Get("is_locked").(bool)),
 	}
@@ -305,6 +294,17 @@ func resourceFieldRead(ctx context.Context, d *schema.ResourceData, m interface{
 	}
 	if field.IsIdentity != nil {
 		d.Set("is_identity", *field.IsIdentity)
+		// NOTE! Azure DevOps API incorrectly returns type=string for identity fields.
+		// Need a more complex test scenario in the future that can verify correct behavior.
+		// Looks correct in the UI.
+		/*
+			[DEBUG] CreateWorkItemField request body: {"isIdentity":true,"isPicklistSuggested":false,"name":"testaccfihmdwdgiu","readOnly":false,"referenceName":"Custom.testaccfihmdwdgiu","type":"identity","usage":"workItem","isLocked":false}
+			[DEBUG] CreateWorkItemField raw response: {"isLocked":false,"name":"testaccfihmdwdgiu","referenceName":"Custom.testaccfihmdwdgiu","description":null,"type":"string","usage":"workItem","readOnly":false,"canSortBy":true,"isQueryable":true,"supportedOperations":[{"referenceName":"SupportedOperations.Equals","name":"="},{"referenceName":"SupportedOperations.NotEquals","name":"<>"},{"referenceName":"SupportedOperations.GreaterThan","name":">"},{"referenceName":"SupportedOperations.LessThan","name":"<"},{"referenceName":"SupportedOperations.GreaterThanEquals","name":">="},{"referenceName":"SupportedOperations.LessThanEquals","name":"<="},{"referenceName":"SupportedOperations.Contains","name":"Contains"},{"referenceName":"SupportedOperations.NotContains","name":"Does Not Contain"},{"referenceName":"SupportedOperations.In","name":"In"},{"name":"Not In"},{"referenceName":"SupportedOperations.InGroup","name":"In Group"},{"referenceName":"SupportedOperations.NotInGroup","name":"Not In Group"},{"referenceName":"Supported
+			Operations.Ever","name":"Was Ever"},{"referenceName":"SupportedOperations.EqualsField","name":"= [Field]"},{"referenceName":"SupportedOperations.NotEqualsField","name":"<> [Field]"},{"referenceName":"SupportedOperations.GreaterThanField","name":"> [Field]"},{"referenceName":"SupportedOperations.LessThanField","name":"< [Field]"},{"referenceName":"SupportedOperations.GreaterThanEqualsField","name":">= [Field]"},{"referenceName":"SupportedOperations.LessThanEqualsField","name":"<= [Field]"}],"isIdentity":true,"isPicklist":false,"isPicklistSuggested":false,"url":"..."}
+		*/
+		if *field.IsIdentity {
+			d.Set("type", string(workitemtracking.FieldTypeValues.Identity))
+		}
 	}
 	if field.IsPicklist != nil {
 		d.Set("is_picklist", *field.IsPicklist)
