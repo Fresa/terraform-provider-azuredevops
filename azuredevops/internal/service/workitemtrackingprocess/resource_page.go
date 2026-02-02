@@ -2,10 +2,9 @@ package workitemtrackingprocess
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
+	"github.com/hashicorp/go-cty/cty/gocty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -13,6 +12,7 @@ import (
 	"github.com/microsoft/terraform-provider-azuredevops/azuredevops/internal/client"
 	"github.com/microsoft/terraform-provider-azuredevops/azuredevops/internal/utils"
 	"github.com/microsoft/terraform-provider-azuredevops/azuredevops/internal/utils/converter"
+	"github.com/microsoft/terraform-provider-azuredevops/azuredevops/internal/utils/tfhelper"
 )
 
 func ResourcePage() *schema.Resource {
@@ -38,12 +38,12 @@ func ResourcePage() *schema.Resource {
 				ValidateDiagFunc: validation.ToDiagFunc(validation.IsUUID),
 				Description:      "The ID of the process.",
 			},
-			"work_item_type_reference_name": {
+			"work_item_type_id": {
 				Type:             schema.TypeString,
 				Required:         true,
 				ForceNew:         true,
 				ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotWhiteSpace),
-				Description:      "The reference name of the work item type.",
+				Description:      "The ID (reference name) of the work item type.",
 			},
 			"label": {
 				Type:             schema.TypeString,
@@ -61,29 +61,9 @@ func ResourcePage() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     true,
-				Description: "A value indicating if the page should be hidden or not.",
+				Description: "A value indicating if the page should be visible or not.",
 			},
-			"page_type": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The type of the page (e.g., custom, history, links, attachments).",
-			},
-			"locked": {
-				Type:        schema.TypeBool,
-				Computed:    true,
-				Description: "A value indicating whether any user operations are permitted on this page.",
-			},
-			"inherited": {
-				Type:        schema.TypeBool,
-				Computed:    true,
-				Description: "A value indicating whether this page has been inherited from a parent layout.",
-			},
-			"overridden": {
-				Type:        schema.TypeBool,
-				Computed:    true,
-				Description: "A value indicating whether this page has been overridden by a child layout.",
-			},
-			"section": {
+			"sections": {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Description: "The sections of the page.",
@@ -102,14 +82,13 @@ func ResourcePage() *schema.Resource {
 }
 
 func importResourcePage(ctx context.Context, d *schema.ResourceData, m any) ([]*schema.ResourceData, error) {
-	// Import ID format: process_id/work_item_type_reference_name/page_id
-	parts := strings.Split(d.Id(), "/")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("invalid import ID format, expected: process_id/work_item_type_reference_name/page_id")
+	parts, err := tfhelper.ParseImportedNameParts(d.Id(), "process_id/work_item_type_id/page_id", 3)
+	if err != nil {
+		return nil, err
 	}
 
 	d.Set("process_id", parts[0])
-	d.Set("work_item_type_reference_name", parts[1])
+	d.Set("work_item_type_id", parts[1])
 	d.SetId(parts[2])
 
 	return []*schema.ResourceData{d}, nil
@@ -123,14 +102,16 @@ func createResourcePage(ctx context.Context, d *schema.ResourceData, m any) diag
 		Visible:  converter.Bool(d.Get("visible").(bool)),
 		PageType: &workitemtrackingprocess.PageTypeValues.Custom,
 	}
-	rawConfig := d.GetRawConfig().AsValueMap()
-	if order := rawConfig["order"]; !order.IsNull() {
-		page.Order = converter.Int(d.Get("order").(int))
+	order, err := getOrder(d)
+	if err != nil {
+		return diag.Errorf(" Getting order. Error %+v", err)
 	}
-
+	if order != nil {
+		page.Order = order
+	}
 	args := workitemtrackingprocess.AddPageArgs{
 		ProcessId:  converter.UUID(d.Get("process_id").(string)),
-		WitRefName: converter.String(d.Get("work_item_type_reference_name").(string)),
+		WitRefName: converter.String(d.Get("work_item_type_id").(string)),
 		Page:       &page,
 	}
 
@@ -152,7 +133,7 @@ func readResourcePage(ctx context.Context, d *schema.ResourceData, m any) diag.D
 
 	pageId := d.Id()
 	processId := d.Get("process_id").(string)
-	witRefName := d.Get("work_item_type_reference_name").(string)
+	witRefName := d.Get("work_item_type_id").(string)
 
 	// Get the work item type with layout expanded
 	getWorkItemTypeArgs := workitemtrackingprocess.GetProcessWorkItemTypeArgs{
@@ -184,18 +165,6 @@ func readResourcePage(ctx context.Context, d *schema.ResourceData, m any) diag.D
 	if foundPage.Visible != nil {
 		d.Set("visible", *foundPage.Visible)
 	}
-	if foundPage.PageType != nil {
-		d.Set("page_type", *foundPage.PageType)
-	}
-	if foundPage.Locked != nil {
-		d.Set("locked", *foundPage.Locked)
-	}
-	if foundPage.Inherited != nil {
-		d.Set("inherited", *foundPage.Inherited)
-	}
-	if foundPage.Overridden != nil {
-		d.Set("overridden", *foundPage.Overridden)
-	}
 
 	if foundPage.Sections != nil {
 		sections := make([]map[string]any, len(*foundPage.Sections))
@@ -206,8 +175,8 @@ func readResourcePage(ctx context.Context, d *schema.ResourceData, m any) diag.D
 			}
 			sections[i] = section
 		}
-		if err := d.Set("section", sections); err != nil {
-			return diag.Errorf(" setting section: %+v", err)
+		if err := d.Set("sections", sections); err != nil {
+			return diag.Errorf(" setting sections: %+v", err)
 		}
 	}
 
@@ -219,16 +188,20 @@ func updateResourcePage(ctx context.Context, d *schema.ResourceData, m any) diag
 
 	pageId := d.Id()
 	processId := d.Get("process_id").(string)
-	witRefName := d.Get("work_item_type_reference_name").(string)
+	witRefName := d.Get("work_item_type_id").(string)
 
 	updatePage := &workitemtrackingprocess.Page{
 		Id:      &pageId,
 		Label:   converter.String(d.Get("label").(string)),
 		Visible: converter.Bool(d.Get("visible").(bool)),
 	}
-	rawConfig := d.GetRawConfig().AsValueMap()
-	if order := rawConfig["order"]; !order.IsNull() {
-		updatePage.Order = converter.Int(d.Get("order").(int))
+
+	order, orderErr := getOrder(d)
+	if orderErr != nil {
+		return diag.Errorf(" Getting order. Error %+v", orderErr)
+	}
+	if order != nil {
+		updatePage.Order = order
 	}
 
 	args := workitemtrackingprocess.UpdatePageArgs{
@@ -252,7 +225,7 @@ func deleteResourcePage(ctx context.Context, d *schema.ResourceData, m any) diag
 
 	args := workitemtrackingprocess.RemovePageArgs{
 		ProcessId:  converter.UUID(d.Get("process_id").(string)),
-		WitRefName: converter.String(d.Get("work_item_type_reference_name").(string)),
+		WitRefName: converter.String(d.Get("work_item_type_id").(string)),
 		PageId:     &pageId,
 	}
 
@@ -262,4 +235,39 @@ func deleteResourcePage(ctx context.Context, d *schema.ResourceData, m any) diag
 	}
 
 	return nil
+}
+
+func findPageById(layout *workitemtrackingprocess.FormLayout, pageId string) *workitemtrackingprocess.Page {
+	if layout == nil {
+		return nil
+	}
+	pages := layout.Pages
+	if pages == nil {
+		return nil
+	}
+	for _, page := range *pages {
+		if page.Id != nil && *page.Id == pageId {
+			return &page
+		}
+	}
+	return nil
+}
+
+// Returns order if there is one defined, otherwise nil
+func getOrder(d *schema.ResourceData) (*int, error) {
+	rawPlan := d.GetRawPlan()
+	if !rawPlan.IsKnown() || rawPlan.IsNull() {
+		return nil, nil
+	}
+
+	order := rawPlan.GetAttr("order")
+	if !order.IsKnown() || order.IsNull() {
+		return nil, nil
+	}
+
+	var val int
+	if err := gocty.FromCtyValue(order, &val); err != nil {
+		return nil, err
+	}
+	return &val, nil
 }

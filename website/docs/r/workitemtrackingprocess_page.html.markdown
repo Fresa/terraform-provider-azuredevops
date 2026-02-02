@@ -23,9 +23,9 @@ resource "azuredevops_workitemtrackingprocess_workitemtype" "example" {
 }
 
 resource "azuredevops_workitemtrackingprocess_page" "example" {
-  process_id                    = azuredevops_workitemtrackingprocess_process.example.id
-  work_item_type_reference_name = azuredevops_workitemtrackingprocess_workitemtype.example.reference_name
-  label                         = "Custom Page"
+  process_id        = azuredevops_workitemtrackingprocess_process.example.id
+  work_item_type_id = azuredevops_workitemtrackingprocess_workitemtype.example.id
+  label             = "Custom Page"
 }
 ```
 
@@ -35,7 +35,7 @@ The following arguments are supported:
 
 * `process_id` - (Required) The ID of the process. Changing this forces a new page to be created.
 
-* `work_item_type_reference_name` - (Required) The reference name of the work item type. Changing this forces a new page to be created.
+* `work_item_type_id` - (Required) The ID (reference name) of the work item type. Changing this forces a new page to be created.
 
 * `label` - (Required) The label for the page.
 
@@ -51,19 +51,11 @@ In addition to the Arguments listed above - the following Attributes are exporte
 
 * `id` - The ID of the page.
 
-* `page_type` - The type of the page (e.g., custom, history, links, attachments).
-
-* `locked` - A value indicating whether any user operations are permitted on this page.
-
-* `inherited` - A value indicating whether this page has been inherited from a parent layout.
-
-* `overridden` - A value indicating whether this page has been overridden by a child layout.
-
-* `section` - The sections of the page. A `section` block as defined below.
+* `sections` - The sections of the page. A `sections` block as defined below.
 
 ---
 
-A `section` block exports the following:
+A `sections` block exports the following:
 
 * `id` - The ID of the section.
 
@@ -82,7 +74,7 @@ The `timeouts` block allows you to specify [timeouts](https://developer.hashicor
 
 ## Import
 
-Pages can be imported using the complete resource id `process_id/work_item_type_reference_name/page_id`, e.g.
+Pages can be imported using the complete resource id `process_id/work_item_type_id/page_id`, e.g.
 
 ```shell
 terraform import azuredevops_workitemtrackingprocess_page.example 00000000-0000-0000-0000-000000000000/MyProcess.CustomWorkItemType/page-id
