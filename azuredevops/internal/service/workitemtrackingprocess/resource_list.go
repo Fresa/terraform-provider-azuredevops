@@ -2,10 +2,12 @@ package workitemtrackingprocess
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/workitemtrackingprocess"
@@ -92,6 +94,10 @@ func resourceListCreate(ctx context.Context, d *schema.ResourceData, m any) diag
 		return diag.Errorf(" Creating list. Error: %+v", err)
 	}
 
+	if createdList == nil {
+		return diag.Errorf(" Created list is nil")
+	}
+
 	if createdList.Id == nil {
 		return diag.Errorf(" Created list has no ID")
 	}
@@ -118,25 +124,7 @@ func resourceListRead(ctx context.Context, d *schema.ResourceData, m any) diag.D
 		return diag.Errorf(" Reading list %s. Error: %+v", listId, err)
 	}
 
-	if list.Name != nil {
-		d.Set("name", *list.Name)
-	}
-	if list.Type != nil {
-		d.Set("type", strings.ToLower(*list.Type))
-	}
-	if list.IsSuggested != nil {
-		d.Set("is_suggested", *list.IsSuggested)
-	}
-	if list.Items != nil {
-		if err := d.Set("items", *list.Items); err != nil {
-			return diag.Errorf(" setting items: %+v", err)
-		}
-	}
-	if list.Url != nil {
-		d.Set("url", *list.Url)
-	}
-
-	return nil
+	return flattenList(d, list)
 }
 
 func resourceListUpdate(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
@@ -159,12 +147,45 @@ func resourceListUpdate(ctx context.Context, d *schema.ResourceData, m any) diag
 		Picklist: picklist,
 	}
 
-	_, err := clients.WorkItemTrackingProcessClient.UpdateList(ctx, args)
+	updatedList, err := clients.WorkItemTrackingProcessClient.UpdateList(ctx, args)
 	if err != nil {
 		return diag.Errorf(" Updating list %s. Error: %+v", listId, err)
 	}
 
-	return resourceListRead(ctx, d, m)
+	if updatedList == nil {
+		return diag.Errorf(" Updated list is nil")
+	}
+
+	if updatedList.Items == nil {
+		return diag.Errorf(" Updated list items is nil")
+	}
+
+	// Wait for read to be consistent with update response due to eventual consistency.
+	stateConf := &retry.StateChangeConf{
+		Pending:                   []string{"inconsistent"},
+		Target:                    []string{"consistent"},
+		ContinuousTargetOccurence: 3,
+		Refresh: func() (any, string, error) {
+			readList, err := clients.WorkItemTrackingProcessClient.GetList(ctx, workitemtrackingprocess.GetListArgs{
+				ListId: converter.UUID(listId),
+			})
+			if err != nil {
+				return nil, "", err
+			}
+			if !listsEqual(updatedList, readList) {
+				return nil, "inconsistent", nil
+			}
+			return readList, "consistent", nil
+		},
+		Timeout: d.Timeout(schema.TimeoutUpdate),
+	}
+
+	result, err := stateConf.WaitForStateContext(ctx)
+	if err != nil {
+		return diag.Errorf(" Waiting for list %s to be consistent. Error: %+v", listId, err)
+	}
+
+	return flattenList(d, result.(*workitemtrackingprocess.PickList))
 }
 
 func resourceListDelete(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
@@ -187,10 +208,58 @@ func resourceListDelete(ctx context.Context, d *schema.ResourceData, m any) diag
 	return nil
 }
 
+func flattenList(d *schema.ResourceData, list *workitemtrackingprocess.PickList) diag.Diagnostics {
+	if list == nil {
+		return diag.Errorf(" list is nil")
+	}
+	if list.Name != nil {
+		d.Set("name", *list.Name)
+	}
+	if list.Type != nil {
+		d.Set("type", strings.ToLower(*list.Type))
+	}
+	if list.IsSuggested != nil {
+		d.Set("is_suggested", *list.IsSuggested)
+	}
+	if list.Items != nil {
+		if err := d.Set("items", *list.Items); err != nil {
+			return diag.Errorf(" setting items: %+v", err)
+		}
+	}
+	if list.Url != nil {
+		d.Set("url", *list.Url)
+	}
+	return nil
+}
+
 func expandItems(input []any) []string {
 	items := make([]string, len(input))
 	for i, v := range input {
 		items[i] = v.(string)
 	}
 	return items
+}
+
+func listsEqual(a, b *workitemtrackingprocess.PickList) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return ptrEqual(a.Name, b.Name) &&
+		ptrEqual(a.Type, b.Type) &&
+		ptrEqual(a.IsSuggested, b.IsSuggested) &&
+		slicePtrEqual(a.Items, b.Items)
+}
+
+func ptrEqual[T comparable](a, b *T) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
+}
+
+func slicePtrEqual[T comparable](a, b *[]T) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return slices.Equal(*a, *b)
 }
