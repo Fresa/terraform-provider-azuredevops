@@ -53,7 +53,6 @@ func TestAccWorkitemtrackingprocessState_Update(t *testing.T) {
 				Config: basicState(workItemTypeName, processName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(tfNode, "id"),
-					resource.TestCheckResourceAttr(tfNode, "order", "2"),
 					captureStateId(tfNode, &stateId),
 				),
 			},
@@ -67,7 +66,18 @@ func TestAccWorkitemtrackingprocessState_Update(t *testing.T) {
 				Config: updatedState(workItemTypeName, processName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrPtr(tfNode, "id", &stateId),
-					resource.TestCheckResourceAttr(tfNode, "order", "3"),
+				),
+			},
+			{
+				ResourceName:      tfNode,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getStateImportIdFunc(tfNode),
+			},
+			{
+				Config: basicState(workItemTypeName, processName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPtr(tfNode, "id", &stateId),
 				),
 			},
 			{
@@ -101,11 +111,12 @@ resource "azuredevops_workitemtrackingprocess_workitemtype" "test" {
 }
 
 resource "azuredevops_workitemtrackingprocess_state" "test" {
-  process_id                    = azuredevops_workitemtrackingprocess_process.test.id
-  work_item_type_reference_name = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
-  name                          = "Ready"
-  color                         = "#b2b2b2"
-  state_category                = "Proposed"
+  process_id        = azuredevops_workitemtrackingprocess_process.test.id
+  work_item_type_id = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
+  name              = "Ready"
+  color             = "#b2b2b2"
+  state_category    = "Proposed"
+  order             = 2
 }
 `, processName, agileSystemProcessTypeId, workItemTypeName)
 }
@@ -123,12 +134,12 @@ resource "azuredevops_workitemtrackingprocess_workitemtype" "test" {
 }
 
 resource "azuredevops_workitemtrackingprocess_state" "test" {
-  process_id                    = azuredevops_workitemtrackingprocess_process.test.id
-  work_item_type_reference_name = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
-  name                          = "Ready"
-  color                         = "#5688E0"
-  state_category                = "InProgress"
-  order                         = 3
+  process_id        = azuredevops_workitemtrackingprocess_process.test.id
+  work_item_type_id = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
+  name              = "Ready"
+  color             = "#5688E0"
+  state_category    = "InProgress"
+  order             = 3
 }
 `, processName, agileSystemProcessTypeId, workItemTypeName)
 }
@@ -138,7 +149,7 @@ func getStateImportIdFunc(tfNode string) resource.ImportStateIdFunc {
 		res := state.RootModule().Resources[tfNode]
 		id := res.Primary.Attributes["id"]
 		processId := res.Primary.Attributes["process_id"]
-		witRefName := res.Primary.Attributes["work_item_type_reference_name"]
+		witRefName := res.Primary.Attributes["work_item_type_id"]
 		return fmt.Sprintf("%s/%s/%s", processId, witRefName, id), nil
 	}
 }
