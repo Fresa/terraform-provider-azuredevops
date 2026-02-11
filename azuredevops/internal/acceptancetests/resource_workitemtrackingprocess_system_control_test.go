@@ -56,6 +56,12 @@ func TestAccWorkitemtrackingprocessSystemControl_Update(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      tfNode,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getSystemControlImportIdFunc(tfNode),
+			},
+			{
 				Config: updatedSystemControl(workItemTypeName, processName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(tfNode, "id"),
@@ -91,7 +97,7 @@ func TestAccWorkitemtrackingprocessSystemControl_Revert(t *testing.T) {
 						processId = value
 						return nil
 					}),
-					resource.TestCheckResourceAttrWith(tfNode, "work_item_type_reference_name", func(value string) error {
+					resource.TestCheckResourceAttrWith(tfNode, "work_item_type_id", func(value string) error {
 						witRefName = value
 						return nil
 					}),
@@ -100,6 +106,12 @@ func TestAccWorkitemtrackingprocessSystemControl_Revert(t *testing.T) {
 						return nil
 					}),
 				),
+			},
+			{
+				ResourceName:      tfNode,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getSystemControlImportIdFunc(tfNode),
 			},
 			{
 				Config: removedSystemControl(workItemTypeName, processName),
@@ -148,10 +160,10 @@ resource "azuredevops_workitemtrackingprocess_workitemtype" "test" {
 }
 
 resource "azuredevops_workitemtrackingprocess_system_control" "test" {
-  process_id                    = azuredevops_workitemtrackingprocess_process.test.id
-  work_item_type_reference_name = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
-  control_id                    = "System.AreaPath"
-  visible                       = false
+  process_id        = azuredevops_workitemtrackingprocess_process.test.id
+  work_item_type_id = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
+  control_id        = "System.AreaPath"
+  visible           = false
 }
 `, processName, agileSystemProcessTypeId, workItemTypeName)
 }
@@ -169,11 +181,11 @@ resource "azuredevops_workitemtrackingprocess_workitemtype" "test" {
 }
 
 resource "azuredevops_workitemtrackingprocess_system_control" "test" {
-  process_id                    = azuredevops_workitemtrackingprocess_process.test.id
-  work_item_type_reference_name = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
-  control_id                    = "System.AreaPath"
-  visible                       = true
-  label                         = "Custom Area"
+  process_id        = azuredevops_workitemtrackingprocess_process.test.id
+  work_item_type_id = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
+  control_id        = "System.AreaPath"
+  visible           = true
+  label             = "Custom Area"
 }
 `, processName, agileSystemProcessTypeId, workItemTypeName)
 }
@@ -197,7 +209,7 @@ func getSystemControlImportIdFunc(tfNode string) resource.ImportStateIdFunc {
 		res := state.RootModule().Resources[tfNode]
 		id := res.Primary.Attributes["id"]
 		processId := res.Primary.Attributes["process_id"]
-		witRefName := res.Primary.Attributes["work_item_type_reference_name"]
+		witRefName := res.Primary.Attributes["work_item_type_id"]
 		return fmt.Sprintf("%s/%s/%s", processId, witRefName, id), nil
 	}
 }
