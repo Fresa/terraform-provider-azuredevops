@@ -56,6 +56,12 @@ func TestAccWorkitemtrackingprocessInheritedControl_Update(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      tfNode,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getInheritedControlImportIdFunc(tfNode),
+			},
+			{
 				Config: updatedInheritedControl(workItemTypeName, processName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(tfNode, "id"),
@@ -91,7 +97,7 @@ func TestAccWorkitemtrackingprocessInheritedControl_Revert(t *testing.T) {
 						processId = value
 						return nil
 					}),
-					resource.TestCheckResourceAttrWith(tfNode, "work_item_type_reference_name", func(value string) error {
+					resource.TestCheckResourceAttrWith(tfNode, "work_item_type_id", func(value string) error {
 						witRefName = value
 						return nil
 					}),
@@ -104,6 +110,12 @@ func TestAccWorkitemtrackingprocessInheritedControl_Revert(t *testing.T) {
 						return nil
 					}),
 				),
+			},
+			{
+				ResourceName:      tfNode,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: getInheritedControlImportIdFunc(tfNode),
 			},
 			{
 				Config: inheritedControlRevertConfig(workItemTypeName, processName),
@@ -128,11 +140,11 @@ resource "azuredevops_workitemtrackingprocess_workitemtype" "test" {
 }
 
 resource "azuredevops_workitemtrackingprocess_inherited_control" "test" {
-  process_id                    = azuredevops_workitemtrackingprocess_process.test.id
-  work_item_type_reference_name = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
-  group_id                      = azuredevops_workitemtrackingprocess_workitemtype.test.pages[0].sections[0].groups[0].id
-  control_id                    = azuredevops_workitemtrackingprocess_workitemtype.test.pages[0].sections[0].groups[0].controls[0].id
-  visible                       = false
+  process_id        = azuredevops_workitemtrackingprocess_process.test.id
+  work_item_type_id = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
+  group_id          = azuredevops_workitemtrackingprocess_workitemtype.test.pages[0].sections[0].groups[0].id
+  control_id        = azuredevops_workitemtrackingprocess_workitemtype.test.pages[0].sections[0].groups[0].controls[0].id
+  visible           = false
 }
 `, processName, agileSystemProcessTypeId, workItemTypeName)
 }
@@ -150,12 +162,12 @@ resource "azuredevops_workitemtrackingprocess_workitemtype" "test" {
 }
 
 resource "azuredevops_workitemtrackingprocess_inherited_control" "test" {
-  process_id                    = azuredevops_workitemtrackingprocess_process.test.id
-  work_item_type_reference_name = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
-  group_id                      = azuredevops_workitemtrackingprocess_workitemtype.test.pages[0].sections[0].groups[0].id
-  control_id                    = azuredevops_workitemtrackingprocess_workitemtype.test.pages[0].sections[0].groups[0].controls[0].id
-  visible                       = true
-  label                         = "Custom Label"
+  process_id        = azuredevops_workitemtrackingprocess_process.test.id
+  work_item_type_id = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
+  group_id          = azuredevops_workitemtrackingprocess_workitemtype.test.pages[0].sections[0].groups[0].id
+  control_id        = azuredevops_workitemtrackingprocess_workitemtype.test.pages[0].sections[0].groups[0].controls[0].id
+  visible           = true
+  label             = "Custom Label"
 }
 `, processName, agileSystemProcessTypeId, workItemTypeName)
 }
@@ -179,7 +191,7 @@ func getInheritedControlImportIdFunc(tfNode string) resource.ImportStateIdFunc {
 		res := state.RootModule().Resources[tfNode]
 		id := res.Primary.Attributes["id"]
 		processId := res.Primary.Attributes["process_id"]
-		witRefName := res.Primary.Attributes["work_item_type_reference_name"]
+		witRefName := res.Primary.Attributes["work_item_type_id"]
 		groupId := res.Primary.Attributes["group_id"]
 		return fmt.Sprintf("%s/%s/%s/%s", processId, witRefName, groupId, id), nil
 	}

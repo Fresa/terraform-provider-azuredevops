@@ -10,9 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/workitemtrackingprocess"
 	"github.com/microsoft/terraform-provider-azuredevops/azdosdkmocks"
 	"github.com/microsoft/terraform-provider-azuredevops/azuredevops/internal/client"
@@ -23,22 +21,7 @@ import (
 
 func getInheritedControlResourceData(t *testing.T, input map[string]any) *schema.ResourceData {
 	r := ResourceInheritedControl()
-
-	attributes := make(map[string]string)
-	rawConfigValues := make(map[string]cty.Value)
-	for k, v := range input {
-		if s, ok := v.(string); ok {
-			attributes[k] = s
-			rawConfigValues[k] = cty.StringVal(s)
-		}
-	}
-
-	state := &terraform.InstanceState{
-		Attributes: attributes,
-		RawConfig:  cty.ObjectVal(rawConfigValues),
-	}
-
-	return r.Data(state)
+	return schema.TestResourceDataRaw(t, r.Schema, input)
 }
 
 func createProcessWorkItemTypeWithControl(witRefName, groupId string, control workitemtrackingprocess.Control) *workitemtrackingprocess.ProcessWorkItemType {
@@ -112,10 +95,10 @@ func TestInheritedControl_Update_NilAttributesSentWhenNotConfigured(t *testing.T
 	).Times(1)
 
 	d := getInheritedControlResourceData(t, map[string]any{
-		"process_id":                    processId.String(),
-		"work_item_type_reference_name": witRefName,
-		"group_id":                      groupId,
-		"control_id":                    controlId,
+		"process_id":        processId.String(),
+		"work_item_type_id": witRefName,
+		"group_id":          groupId,
+		"control_id":        controlId,
 	})
 	d.SetId(controlId)
 
@@ -150,7 +133,16 @@ func TestInheritedControl_Create_Validation(t *testing.T) {
 			name:          "nil work item type",
 			groupId:       existingGroupId,
 			controlId:     existingControlId,
-			expectedError: "work item type or layout is nil",
+			expectedError: "work item type is nil",
+		},
+		{
+			name:      "nil layout",
+			groupId:   existingGroupId,
+			controlId: existingControlId,
+			returnWorkItemType: &workitemtrackingprocess.ProcessWorkItemType{
+				ReferenceName: &witRefName,
+			},
+			expectedError: "work item type layout is nil",
 		},
 		{
 			name:      "group not found",
@@ -195,10 +187,10 @@ func TestInheritedControl_Create_Validation(t *testing.T) {
 			mockClient.EXPECT().GetProcessWorkItemType(clients.Ctx, gomock.Any()).Return(tt.returnWorkItemType, tt.returnError).Times(1)
 
 			d := getInheritedControlResourceData(t, map[string]any{
-				"process_id":                    processId.String(),
-				"work_item_type_reference_name": witRefName,
-				"group_id":                      tt.groupId,
-				"control_id":                    tt.controlId,
+				"process_id":        processId.String(),
+				"work_item_type_id": witRefName,
+				"group_id":          tt.groupId,
+				"control_id":        tt.controlId,
 			})
 
 			diags := createResourceInheritedControl(context.Background(), d, clients)
