@@ -191,7 +191,7 @@ func inheritedStateImportStateIdFunc(resourceName string) resource.ImportStateId
 		}
 		processId := rs.Primary.Attributes["process_id"]
 		witRefName := rs.Primary.Attributes["work_item_type_id"]
-		stateName := rs.Primary.Attributes["name"]
-		return fmt.Sprintf("%s/%s/%s", processId, witRefName, stateName), nil
+		stateId := rs.Primary.ID
+		return fmt.Sprintf("%s/%s/%s", processId, witRefName, stateId), nil
 	}
 }

@@ -69,8 +69,8 @@ The `timeouts` block allows you to specify [timeouts](https://developer.hashicor
 
 ## Import
 
-Inherited states can be imported using the complete resource id `process_id/work_item_type_id/name`, e.g.
+Inherited states can be imported using the complete resource id `process_id/work_item_type_id/state_id`, e.g.
 
 ```shell
-terraform import azuredevops_workitemtrackingprocess_inherited_state.example 00000000-0000-0000-0000-000000000000/MyProcess.CustomWorkItemType/New
+terraform import azuredevops_workitemtrackingprocess_inherited_state.example 00000000-0000-0000-0000-000000000000/MyProcess.CustomWorkItemType/00000000-0000-0000-0000-000000000001
 ```

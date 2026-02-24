@@ -6,7 +6,6 @@ package workitemtrackingprocess
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -84,64 +83,4 @@ func TestInheritedState_Create(t *testing.T) {
 		})
 	}
 
-}
-
-func TestInheritedState_Import(t *testing.T) {
-	processId := uuid.New()
-	witRefName := "MyProcess.MyWorkItemType"
-	stateId := uuid.New()
-	stateName := "New"
-
-	tests := []struct {
-		name          string
-		returnStates  *[]workitemtrackingprocess.WorkItemStateResultModel
-		returnError   error
-		expectedError string
-	}{
-		{
-			name:          "state not found",
-			returnStates:  &[]workitemtrackingprocess.WorkItemStateResultModel{},
-			expectedError: "not found",
-		},
-		{
-			name: "custom state",
-			returnStates: &[]workitemtrackingprocess.WorkItemStateResultModel{
-				{Name: &stateName, Id: &stateId, CustomizationType: &workitemtrackingprocess.CustomizationTypeValues.Custom},
-			},
-			expectedError: "is a custom state",
-		},
-		{
-			name: "customization type is nil",
-			returnStates: &[]workitemtrackingprocess.WorkItemStateResultModel{
-				{Name: &stateName, Id: &stateId, CustomizationType: nil},
-			},
-			expectedError: "has no customization type",
-		},
-		{
-			name: "state ID is nil",
-			returnStates: &[]workitemtrackingprocess.WorkItemStateResultModel{
-				{Name: &stateName, Id: nil, CustomizationType: &workitemtrackingprocess.CustomizationTypeValues.System},
-			},
-			expectedError: "state ID is nil",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockClient := azdosdkmocks.NewMockWorkitemtrackingprocessClient(ctrl)
-			clients := &client.AggregatedClient{WorkItemTrackingProcessClient: mockClient, Ctx: context.Background()}
-
-			mockClient.EXPECT().GetStateDefinitions(gomock.Any(), gomock.Any()).Return(tt.returnStates, tt.returnError)
-			d := getInheritedStateResourceData(t, map[string]any{})
-			d.SetId(fmt.Sprintf("%s/%s/%s", processId.String(), witRefName, stateName))
-
-			_, err := importResourceInheritedState(context.Background(), d, clients)
-
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), tt.expectedError)
-		})
-	}
 }

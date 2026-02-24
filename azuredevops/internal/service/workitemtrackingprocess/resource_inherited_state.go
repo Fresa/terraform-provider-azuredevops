@@ -3,7 +3,6 @@ package workitemtrackingprocess
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -12,6 +11,7 @@ import (
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/workitemtrackingprocess"
 	"github.com/microsoft/terraform-provider-azuredevops/azuredevops/internal/client"
 	"github.com/microsoft/terraform-provider-azuredevops/azuredevops/internal/utils/converter"
+	"github.com/microsoft/terraform-provider-azuredevops/azuredevops/internal/utils/tfhelper"
 )
 
 func ResourceInheritedState() *schema.Resource {
@@ -62,27 +62,14 @@ func ResourceInheritedState() *schema.Resource {
 }
 
 func importResourceInheritedState(ctx context.Context, d *schema.ResourceData, m any) ([]*schema.ResourceData, error) {
-	// Import ID format: process_id/work_item_type_id/name
-	parts := strings.Split(d.Id(), "/")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("invalid import ID format, expected: process_id/work_item_type_id/name")
+	parts, err := tfhelper.ParseImportedNameParts(d.Id(), "process_id/work_item_type_id/state_id", 3)
+	if err != nil {
+		return nil, err
 	}
 
 	d.Set("process_id", parts[0])
 	d.Set("work_item_type_id", parts[1])
-	d.Set("name", parts[2])
-
-	// We need to look up the state by name to get its ID
-	clients := m.(*client.AggregatedClient)
-	state, err := findInheritedStateByName(ctx, clients, parts[0], parts[1], parts[2])
-	if err != nil {
-		return nil, err
-	}
-	if state.Id == nil {
-		return nil, fmt.Errorf("state ID is nil")
-	}
-
-	d.SetId(state.Id.String())
+	d.SetId(parts[2])
 
 	return []*schema.ResourceData{d}, nil
 }
@@ -127,6 +114,7 @@ func readResourceInheritedState(ctx context.Context, d *schema.ResourceData, m a
 		return nil
 	}
 
+	d.Set("name", state.Name)
 	d.Set("hidden", state.Hidden)
 
 	return nil
