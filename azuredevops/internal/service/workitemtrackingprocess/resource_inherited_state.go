@@ -51,11 +51,11 @@ func ResourceInheritedState() *schema.Resource {
 				ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotWhiteSpace),
 				Description:      "Name of the inherited state to manage.",
 			},
-			"hidden": {
+			"visible": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Computed:    true,
-				Description: "Whether the state is hidden.",
+				Description: "Whether the state should be visible.",
 			},
 		},
 	}
@@ -127,7 +127,9 @@ func readResourceInheritedState(ctx context.Context, d *schema.ResourceData, m a
 	}
 
 	if state.Hidden != nil {
-		d.Set("hidden", *state.Hidden)
+		d.Set("visible", !*state.Hidden)
+	} else {
+		d.Set("visible", true)
 	}
 
 	return nil
@@ -140,9 +142,12 @@ func updateResourceInheritedState(ctx context.Context, d *schema.ResourceData, m
 	processId := d.Get("process_id").(string)
 	witRefName := d.Get("work_item_type_id").(string)
 
-	rawConfig := d.GetRawConfig().AsValueMap()
-	if hiddenRaw := rawConfig["hidden"]; !hiddenRaw.IsNull() {
-		hidden := hiddenRaw.True()
+	visible, err := getBoolAttributeFromConfig(d, "visible")
+	if err != nil {
+		return diag.Errorf("getting visible from config: %+v", err)
+	}
+	if visible != nil {
+		hidden := !*visible
 		if hidden {
 			_, err := clients.WorkItemTrackingProcessClient.HideStateDefinition(ctx, workitemtrackingprocess.HideStateDefinitionArgs{
 				ProcessId:      converter.UUID(processId),

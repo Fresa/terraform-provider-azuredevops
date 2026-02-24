@@ -25,7 +25,7 @@ func TestAccWorkitemtrackingprocessInheritedState_Basic(t *testing.T) {
 		CheckDestroy:      testutils.CheckProcessDestroyed,
 		Steps: []resource.TestStep{
 			{
-				Config: inheritedStateConfig(processName, true),
+				Config: inheritedStateConfig(processName, false),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(tfNode, tfjsonpath.New("id"), knownvalue.NotNull()),
 				},
@@ -50,13 +50,19 @@ func TestAccWorkitemtrackingprocessInheritedState_Update(t *testing.T) {
 		CheckDestroy:      testutils.CheckProcessDestroyed,
 		Steps: []resource.TestStep{
 			{
-				Config: inheritedStateConfig(processName, true),
+				Config: inheritedStateConfig(processName, false),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(tfNode, tfjsonpath.New("id"), knownvalue.NotNull()),
 				},
 			},
 			{
-				Config: inheritedStateConfig(processName, false),
+				ResourceName:      tfNode,
+				ImportStateIdFunc: inheritedPageImportStateIdFunc(tfNode),
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: inheritedStateConfig(processName, true),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(tfNode, tfjsonpath.New("id"), knownvalue.NotNull()),
 				},
@@ -73,7 +79,7 @@ func TestAccWorkitemtrackingprocessInheritedState_Update(t *testing.T) {
 
 func TestAccWorkitemtrackingprocessInheritedState_RemoveFromState(t *testing.T) {
 	processName := testutils.GenerateResourceName()
-	inheritedStateNode := "azuredevops_workitemtrackingprocess_inherited_state.test"
+	tfNode := "azuredevops_workitemtrackingprocess_inherited_state.test"
 
 	var stateId string
 	var processId string
@@ -85,24 +91,30 @@ func TestAccWorkitemtrackingprocessInheritedState_RemoveFromState(t *testing.T) 
 		CheckDestroy:      testutils.CheckProcessDestroyed,
 		Steps: []resource.TestStep{
 			{
-				Config: inheritedStateConfig(processName, true),
+				Config: inheritedStateConfig(processName, false),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(inheritedStateNode, tfjsonpath.New("id"),
+					statecheck.ExpectKnownValue(tfNode, tfjsonpath.New("id"),
 						knownvalue.StringFunc(func(value string) error {
 							stateId = value
 							return nil
 						})),
-					statecheck.ExpectKnownValue(inheritedStateNode, tfjsonpath.New("process_id"),
+					statecheck.ExpectKnownValue(tfNode, tfjsonpath.New("process_id"),
 						knownvalue.StringFunc(func(value string) error {
 							processId = value
 							return nil
 						})),
-					statecheck.ExpectKnownValue(inheritedStateNode, tfjsonpath.New("work_item_type_id"),
+					statecheck.ExpectKnownValue(tfNode, tfjsonpath.New("work_item_type_id"),
 						knownvalue.StringFunc(func(value string) error {
 							witRefName = value
 							return nil
 						})),
 				},
+			},
+			{
+				ResourceName:      tfNode,
+				ImportStateIdFunc: inheritedPageImportStateIdFunc(tfNode),
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				// Remove the inherited_state resource from config - state should still exist in Azure DevOps
@@ -115,7 +127,7 @@ func TestAccWorkitemtrackingprocessInheritedState_RemoveFromState(t *testing.T) 
 	})
 }
 
-func inheritedStateConfig(processName string, hidden bool) string {
+func inheritedStateConfig(processName string, visible bool) string {
 	return fmt.Sprintf(`
 resource "azuredevops_workitemtrackingprocess_process" "test" {
   name                   = "%s"
@@ -129,12 +141,12 @@ resource "azuredevops_workitemtrackingprocess_workitemtype" "test" {
 }
 
 resource "azuredevops_workitemtrackingprocess_inherited_state" "test" {
-  process_id                    = azuredevops_workitemtrackingprocess_process.test.id
+  process_id        = azuredevops_workitemtrackingprocess_process.test.id
   work_item_type_id = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
-  name                          = "New"
-  hidden                        = %t
+  name              = "New"
+  visible           = %t
 }
-`, processName, hidden)
+`, processName, visible)
 }
 
 func removedInheritedState(processName string) string {

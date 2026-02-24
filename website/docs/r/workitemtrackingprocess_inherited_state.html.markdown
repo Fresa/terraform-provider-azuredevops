@@ -29,10 +29,10 @@ resource "azuredevops_workitemtrackingprocess_workitemtype" "example" {
 
 # Hide an inherited state
 resource "azuredevops_workitemtrackingprocess_inherited_state" "example" {
-  process_id                    = azuredevops_workitemtrackingprocess_process.example.id
+  process_id        = azuredevops_workitemtrackingprocess_process.example.id
   work_item_type_id = azuredevops_workitemtrackingprocess_workitemtype.example.reference_name
-  name                          = "New"
-  hidden                        = true
+  name              = "New"
+  visible           = false
 }
 ```
 
@@ -46,7 +46,7 @@ The following arguments are supported:
 
 * `name` - (Required) Name of the inherited state to manage. This is used to look up the state and must match an existing inherited state name. Changing this forces a new resource to be created.
 
-* `hidden` - (Optional) Whether the state is hidden.
+* `visible` - (Optional) Whether the state is visible.
 
 ## Attributes Reference
 
