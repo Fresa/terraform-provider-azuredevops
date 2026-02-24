@@ -129,6 +129,18 @@ func readResourceInheritedState(ctx context.Context, d *schema.ResourceData, m a
 	if state.Hidden != nil {
 		d.Set("visible", !*state.Hidden)
 	} else {
+		/*
+			Since visible/hidden is never explicitly sent to the downstream API
+			we must assume that when hidden is not set the resource is visible
+			or else there might be a diff if visibility was configured.
+
+			We can also not use nil as the v2 SDK will translate that to false 
+			and even if it didn't the above still applies.
+
+			We could have defined this attribute as WriteOnly, but it becomes
+			inherently more difficult to test the expected behavior without diff
+			and we would still need to interpret what a missing hidden property means.
+		*/
 		d.Set("visible", true)
 	}
 
