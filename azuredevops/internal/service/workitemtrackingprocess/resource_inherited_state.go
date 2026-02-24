@@ -37,12 +37,12 @@ func ResourceInheritedState() *schema.Resource {
 				ValidateDiagFunc: validation.ToDiagFunc(validation.IsUUID),
 				Description:      "The ID of the process.",
 			},
-			"work_item_type_reference_name": {
+			"work_item_type_id": {
 				Type:             schema.TypeString,
 				Required:         true,
 				ForceNew:         true,
 				ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotWhiteSpace),
-				Description:      "The reference name of the work item type.",
+				Description:      "The ID (reference name) of the work item type.",
 			},
 			"name": {
 				Type:             schema.TypeString,
@@ -62,14 +62,14 @@ func ResourceInheritedState() *schema.Resource {
 }
 
 func importResourceInheritedState(ctx context.Context, d *schema.ResourceData, m any) ([]*schema.ResourceData, error) {
-	// Import ID format: process_id/work_item_type_reference_name/state_name
+	// Import ID format: process_id/work_item_type_id/name
 	parts := strings.Split(d.Id(), "/")
 	if len(parts) != 3 {
-		return nil, fmt.Errorf("invalid import ID format, expected: process_id/work_item_type_reference_name/state_name")
+		return nil, fmt.Errorf("invalid import ID format, expected: process_id/work_item_type_id/name")
 	}
 
 	d.Set("process_id", parts[0])
-	d.Set("work_item_type_reference_name", parts[1])
+	d.Set("work_item_type_id", parts[1])
 	d.Set("name", parts[2])
 
 	// We need to look up the state by name to get its ID
@@ -91,7 +91,7 @@ func createResourceInheritedState(ctx context.Context, d *schema.ResourceData, m
 	clients := m.(*client.AggregatedClient)
 
 	processId := d.Get("process_id").(string)
-	witRefName := d.Get("work_item_type_reference_name").(string)
+	witRefName := d.Get("work_item_type_id").(string)
 	name := d.Get("name").(string)
 
 	state, err := findInheritedStateByName(ctx, clients, processId, witRefName, name)
@@ -112,7 +112,7 @@ func readResourceInheritedState(ctx context.Context, d *schema.ResourceData, m a
 
 	stateId := d.Id()
 	processId := d.Get("process_id").(string)
-	witRefName := d.Get("work_item_type_reference_name").(string)
+	witRefName := d.Get("work_item_type_id").(string)
 
 	state, err := clients.WorkItemTrackingProcessClient.GetStateDefinition(ctx, workitemtrackingprocess.GetStateDefinitionArgs{
 		ProcessId:  converter.UUID(processId),
@@ -137,7 +137,7 @@ func updateResourceInheritedState(ctx context.Context, d *schema.ResourceData, m
 
 	stateId := d.Id()
 	processId := d.Get("process_id").(string)
-	witRefName := d.Get("work_item_type_reference_name").(string)
+	witRefName := d.Get("work_item_type_id").(string)
 
 	rawConfig := d.GetRawConfig().AsValueMap()
 	if hiddenRaw := rawConfig["hidden"]; !hiddenRaw.IsNull() {
@@ -173,7 +173,7 @@ func deleteResourceInheritedState(ctx context.Context, d *schema.ResourceData, m
 
 	stateId := d.Id()
 	processId := d.Get("process_id").(string)
-	witRefName := d.Get("work_item_type_reference_name").(string)
+	witRefName := d.Get("work_item_type_id").(string)
 
 	err := clients.WorkItemTrackingProcessClient.DeleteStateDefinition(ctx, workitemtrackingprocess.DeleteStateDefinitionArgs{
 		ProcessId:  converter.UUID(processId),

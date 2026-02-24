@@ -97,7 +97,7 @@ func TestAccWorkitemtrackingprocessInheritedState_RemoveFromState(t *testing.T) 
 							processId = value
 							return nil
 						})),
-					statecheck.ExpectKnownValue(inheritedStateNode, tfjsonpath.New("work_item_type_reference_name"),
+					statecheck.ExpectKnownValue(inheritedStateNode, tfjsonpath.New("work_item_type_id"),
 						knownvalue.StringFunc(func(value string) error {
 							witRefName = value
 							return nil
@@ -130,7 +130,7 @@ resource "azuredevops_workitemtrackingprocess_workitemtype" "test" {
 
 resource "azuredevops_workitemtrackingprocess_inherited_state" "test" {
   process_id                    = azuredevops_workitemtrackingprocess_process.test.id
-  work_item_type_reference_name = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
+  work_item_type_id = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
   name                          = "New"
   hidden                        = %t
 }
@@ -190,7 +190,7 @@ func inheritedStateImportStateIdFunc(resourceName string) resource.ImportStateId
 			return "", fmt.Errorf("resource not found: %s", resourceName)
 		}
 		processId := rs.Primary.Attributes["process_id"]
-		witRefName := rs.Primary.Attributes["work_item_type_reference_name"]
+		witRefName := rs.Primary.Attributes["work_item_type_id"]
 		stateName := rs.Primary.Attributes["name"]
 		return fmt.Sprintf("%s/%s/%s", processId, witRefName, stateName), nil
 	}

@@ -73,7 +73,7 @@ func TestInheritedState_Create(t *testing.T) {
 			mockClient.EXPECT().GetStateDefinitions(gomock.Any(), gomock.Any()).Return(tt.returnStates, tt.returnError)
 			d := getInheritedStateResourceData(t, map[string]any{
 				"process_id":                    processId.String(),
-				"work_item_type_reference_name": witRefName,
+				"work_item_type_id": witRefName,
 				"name":                          stateName,
 			})
 
