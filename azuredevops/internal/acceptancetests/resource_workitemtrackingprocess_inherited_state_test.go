@@ -57,7 +57,7 @@ func TestAccWorkitemtrackingprocessInheritedState_Update(t *testing.T) {
 			},
 			{
 				ResourceName:      tfNode,
-				ImportStateIdFunc: inheritedPageImportStateIdFunc(tfNode),
+				ImportStateIdFunc: inheritedStateImportStateIdFunc(tfNode),
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -112,7 +112,7 @@ func TestAccWorkitemtrackingprocessInheritedState_RemoveFromState(t *testing.T) 
 			},
 			{
 				ResourceName:      tfNode,
-				ImportStateIdFunc: inheritedPageImportStateIdFunc(tfNode),
+				ImportStateIdFunc: inheritedStateImportStateIdFunc(tfNode),
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
