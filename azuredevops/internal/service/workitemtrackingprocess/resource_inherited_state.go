@@ -134,7 +134,7 @@ func readResourceInheritedState(ctx context.Context, d *schema.ResourceData, m a
 			we must assume that when hidden is not set the resource is visible
 			or else there might be a diff if visibility was configured.
 
-			We can also not use nil as the v2 SDK will translate that to false 
+			We can also not use nil as the v2 SDK will translate that to false
 			and even if it didn't the above still applies.
 
 			We could have defined this attribute as WriteOnly, but it becomes
@@ -161,6 +161,7 @@ func updateResourceInheritedState(ctx context.Context, d *schema.ResourceData, m
 	if visible != nil {
 		hidden := !*visible
 		if hidden {
+			// This operation does not allow setting hidden: false
 			_, err := clients.WorkItemTrackingProcessClient.HideStateDefinition(ctx, workitemtrackingprocess.HideStateDefinitionArgs{
 				ProcessId:      converter.UUID(processId),
 				WitRefName:     &witRefName,
