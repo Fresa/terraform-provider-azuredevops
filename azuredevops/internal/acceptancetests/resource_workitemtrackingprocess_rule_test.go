@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/microsoft/terraform-provider-azuredevops/azuredevops/internal/acceptancetests/testutils"
 )
 
@@ -21,9 +24,9 @@ func TestAccWorkitemtrackingprocessRule_Basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: multipleConditionsRule(workItemTypeName, processName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet(tfNode, "id"),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(tfNode, tfjsonpath.New("id"), knownvalue.NotNull()),
+				},
 			},
 			{
 				ResourceName:      tfNode,
@@ -47,9 +50,9 @@ func TestAccWorkitemtrackingprocessRule_Update(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: multipleConditionsRule(workItemTypeName, processName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet(tfNode, "id"),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(tfNode, tfjsonpath.New("id"), knownvalue.NotNull()),
+				},
 			},
 			{
 				ResourceName:      tfNode,
@@ -59,9 +62,9 @@ func TestAccWorkitemtrackingprocessRule_Update(t *testing.T) {
 			},
 			{
 				Config: updatedRule(workItemTypeName, processName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet(tfNode, "id"),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(tfNode, tfjsonpath.New("id"), knownvalue.NotNull()),
+				},
 			},
 			{
 				ResourceName:      tfNode,
@@ -214,9 +217,9 @@ func TestAccWorkitemtrackingprocessRule_HideTargetField(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: ruleWithHideTargetField(workItemTypeName, processName, "", groupName, fieldName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet(tfNode, "id"),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(tfNode, tfjsonpath.New("id"), knownvalue.NotNull()),
+				},
 			},
 			{
 				ResourceName:      tfNode,
@@ -240,9 +243,9 @@ func TestAccWorkitemtrackingprocessRule_DisallowValue(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: ruleWithDisallowValue(workItemTypeName, processName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttrSet(tfNode, "id"),
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(tfNode, tfjsonpath.New("id"), knownvalue.NotNull()),
+				},
 			},
 			{
 				ResourceName:      tfNode,
