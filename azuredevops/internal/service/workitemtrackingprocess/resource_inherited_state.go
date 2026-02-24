@@ -126,7 +126,9 @@ func readResourceInheritedState(ctx context.Context, d *schema.ResourceData, m a
 		return nil
 	}
 
-	d.Set("hidden", state.Hidden)
+	if state.Hidden != nil {
+		d.Set("hidden", *state.Hidden)
+	}
 
 	return nil
 }
