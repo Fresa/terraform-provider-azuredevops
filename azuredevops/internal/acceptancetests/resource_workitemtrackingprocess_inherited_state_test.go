@@ -131,7 +131,7 @@ func inheritedStateConfig(processName string, visible bool) string {
 	return fmt.Sprintf(`
 resource "azuredevops_workitemtrackingprocess_process" "test" {
   name                   = "%s"
-  parent_process_type_id = "adcc42ab-9882-485e-a3ed-7678f01f66bc"
+  parent_process_type_id = "%s"
 }
 
 resource "azuredevops_workitemtrackingprocess_workitemtype" "test" {
@@ -146,14 +146,14 @@ resource "azuredevops_workitemtrackingprocess_inherited_state" "test" {
   name              = "New"
   visible           = %t
 }
-`, processName, visible)
+`, processName, agileSystemProcessTypeId, visible)
 }
 
 func removedInheritedState(processName string) string {
 	return fmt.Sprintf(`
 resource "azuredevops_workitemtrackingprocess_process" "test" {
   name                   = "%s"
-  parent_process_type_id = "adcc42ab-9882-485e-a3ed-7678f01f66bc"
+  parent_process_type_id = "%s"
 }
 
 resource "azuredevops_workitemtrackingprocess_workitemtype" "test" {
@@ -161,7 +161,7 @@ resource "azuredevops_workitemtrackingprocess_workitemtype" "test" {
   name                            = "Bug"
   parent_work_item_reference_name = "Microsoft.VSTS.WorkItemTypes.Bug"
 }
-`, processName)
+`, processName, agileSystemProcessTypeId)
 }
 
 func checkInheritedStateStillExists(processIdStr *string, witRefName *string, stateId *string) resource.TestCheckFunc {
