@@ -120,7 +120,7 @@ func TestAccWorkitemtrackingprocessInheritedState_RemoveFromState(t *testing.T) 
 				// Remove the inherited_state resource from config - state should still exist in Azure DevOps
 				Config: removedInheritedState(processName),
 				Check: resource.ComposeTestCheckFunc(
-					checkInheritedStateStillExists(&processId, &witRefName, &stateId),
+					checkInheritedStateReverted(&processId, &witRefName, &stateId),
 				),
 			},
 		},
@@ -164,7 +164,7 @@ resource "azuredevops_workitemtrackingprocess_workitemtype" "test" {
 `, processName, agileSystemProcessTypeId)
 }
 
-func checkInheritedStateStillExists(processIdStr *string, witRefName *string, stateId *string) resource.TestCheckFunc {
+func checkInheritedStateReverted(processIdStr *string, witRefName *string, stateId *string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		clients := testutils.GetProvider().Meta().(*client.AggregatedClient)
 
@@ -189,6 +189,10 @@ func checkInheritedStateStillExists(processIdStr *string, witRefName *string, st
 
 		if state == nil {
 			return fmt.Errorf("inherited state should still exist after removing from Terraform but it was not found")
+		}
+
+		if state.Hidden != nil && *state.Hidden == true {
+			return fmt.Errorf("inherited state should have reverted to visible")
 		}
 
 		return nil
