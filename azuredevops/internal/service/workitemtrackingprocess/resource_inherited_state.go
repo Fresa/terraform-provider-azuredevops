@@ -221,6 +221,8 @@ func findInheritedStateByName(ctx context.Context, clients *client.AggregatedCli
 				if state.CustomizationType == nil {
 					return nil, fmt.Errorf("state %q has no customization type", name)
 				}
+				// States inherited from another work item type are marked as "System". 
+				// Once the state get hidden it transform to "Inherited", so both are expected here.
 				if *state.CustomizationType == workitemtrackingprocess.CustomizationTypeValues.Custom {
 					return nil, fmt.Errorf("state %q is a custom state, use azuredevops_workitemtrackingprocess_state for custom states", name)
 				}
