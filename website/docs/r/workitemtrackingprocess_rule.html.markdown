@@ -148,7 +148,7 @@ The following arguments are supported:
 
 ---
 
-* `is_disabled` - (Optional) Indicates if the rule is disabled. Default: `false`
+* `is_enabled` - (Optional) Indicates if the rule is enabled. Default: `true`
 
 ---
 

@@ -93,11 +93,11 @@ func ResourceRule() *schema.Resource {
 				ValidateDiagFunc: validation.ToDiagFunc(validation.StringIsNotWhiteSpace),
 				Description:      "Name of the rule.",
 			},
-			"is_disabled": {
+			"is_enabled": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     false,
-				Description: "Indicates if the rule is disabled.",
+				Default:     true,
+				Description: "Indicates if the rule is enabled.",
 			},
 			"condition": {
 				Type:        schema.TypeSet,
@@ -168,7 +168,7 @@ func resourceRuleCreate(ctx context.Context, d *schema.ResourceData, m any) diag
 
 	ruleRequest := &workitemtrackingprocess.CreateProcessRuleRequest{
 		Name:       converter.String(d.Get("name").(string)),
-		IsDisabled: converter.Bool(d.Get("is_disabled").(bool)),
+		IsDisabled: converter.Bool(!d.Get("is_enabled").(bool)),
 		Conditions: expandConditions(d.Get("condition").(*schema.Set).List()),
 		Actions:    expandActions(d.Get("action").(*schema.Set).List()),
 	}
@@ -226,7 +226,7 @@ func resourceRuleRead(ctx context.Context, d *schema.ResourceData, m any) diag.D
 		d.Set("name", *rule.Name)
 	}
 	if rule.IsDisabled != nil {
-		d.Set("is_disabled", *rule.IsDisabled)
+		d.Set("is_enabled", !*rule.IsDisabled)
 	}
 	if rule.Url != nil {
 		d.Set("url", *rule.Url)
@@ -255,7 +255,7 @@ func resourceRuleUpdate(ctx context.Context, d *schema.ResourceData, m any) diag
 	ruleUpdate := &workitemtrackingprocess.UpdateProcessRuleRequest{
 		Id:         converter.UUID(ruleId),
 		Name:       converter.String(d.Get("name").(string)),
-		IsDisabled: converter.Bool(d.Get("is_disabled").(bool)),
+		IsDisabled: converter.Bool(!d.Get("is_enabled").(bool)),
 		Conditions: expandConditions(d.Get("condition").(*schema.Set).List()),
 		Actions:    expandActions(d.Get("action").(*schema.Set).List()),
 	}

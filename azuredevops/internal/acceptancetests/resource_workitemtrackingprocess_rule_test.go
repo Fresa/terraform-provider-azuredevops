@@ -266,7 +266,7 @@ resource "azuredevops_workitemtrackingprocess_rule" "test" {
   process_id        = azuredevops_workitemtrackingprocess_process.test.id
   work_item_type_id = azuredevops_workitemtrackingprocess_workitemtype.test.reference_name
   name              = "Updated Rule"
-  is_disabled       = true
+  is_enabled        = false
 
   condition {
     condition_type = "when"
