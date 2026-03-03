@@ -141,7 +141,7 @@ func ResourceRule() *schema.Resource {
 						"target_field": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "Field to act on.",
+							Description: "Field (reference name) to act on.",
 						},
 						"value": {
 							Type:        schema.TypeString,

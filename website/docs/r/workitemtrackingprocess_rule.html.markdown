@@ -166,7 +166,7 @@ A `action` block supports the following:
 
 * `action_type` - (Required) Type of action. Valid values: `makeRequired`, `makeReadOnly`, `setDefaultValue`, `setDefaultFromClock`, `setDefaultFromField`, `copyValue`, `copyFromClock`, `copyFromCurrentUser`, `copyFromField`, `setValueToEmpty`, `copyFromServerClock`, `copyFromServerCurrentUser`, `hideTargetField`, `disallowValue`.
 
-* `target_field` - (Required) Field to act on.
+* `target_field` - (Required) Field (reference name) to act on.
 
 * `value` - (Optional) Value to set on the target field.
 
