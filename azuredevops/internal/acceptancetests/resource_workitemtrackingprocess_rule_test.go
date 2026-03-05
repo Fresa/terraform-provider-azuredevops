@@ -416,10 +416,8 @@ resource "azuredevops_workitemtrackingprocess_rule" "test" {
 
   action {
     action_type  = "hideTargetField"
-    target_field = azuredevops_workitemtracking_field.test.reference_name
+    target_field = azuredevops_workitemtrackingprocess_field.test.field_id
   }
-
-  depends_on = [azuredevops_workitemtrackingprocess_field.test]
 }
 `, workItemType, groupName, fieldName, fieldName)
 }
